@@ -425,88 +425,96 @@ app.get('/logout', (req, res)=>{
 app.get('/upload',(req,res)=>
 {
     if(req.session.loggedin){
-    res.render('user_credentials.hbs',{username:user_id});
+    res.render('user_credentials.hbs',{username:user_id})
     }
 });
+
+//route to handle repetitive document verification submissions from vehicle owner
 var User_id,aadhar,voter,pan,license
 app.post('/afterentry',async(req,res)=>{
-     User_id=req.body.username;
-     aadhar=req.body.aadhar;
-     pan=req.body.pan;
-     voter=req.body.voter;
-     license=req.body.license;
+     User_id=req.body.username
+     aadhar=req.body.aadhar
+     pan=req.body.pan
+     voter=req.body.voter
+     license=req.body.license
     const query1="SELECT user_id from user_docs_temp where user_id=?"
     pool.query(query1,[user_id],(req,results,err)=>{
       if(results.length>=1)
-      res.send({"Status":"Your Request is Pending"});
+      res.send({"Status":"Your Request is Pending"})
       
     else{
-      const query2="SELECT user_id from user_docs where user_id=?";
+      const query2="SELECT user_id from user_docs where user_id=?"
       pool.query(query2,[user_id],(requests1,results1,err)=>{
         if(results1.length>=1)
         res.send({"Status":"Your Request is already accepted"})
         else{
-          res.render('usercredentialsproof');
-}
-});
+          res.render('usercredentialsproof')
+        }
+      })
     }
-  });
-});
+  })
+})
+
+//route to convert uploaded file to jpeg/jpg
 app.post('/afterproofentry',upload11.single('docs'),async (req,res)=>{
     const file=req.file;
-    console.log(file.path);
-    const fileBuffer = await sharp(file.path).jpeg().toBuffer(); // convert the file to a JPEG buffer
+    console.log(file.path)
+    const fileBuffer = await sharp(file.path).jpeg().toBuffer() // convert the file to a JPEG buffer
     fs.writeFile(file.path + '.jpg', fileBuffer, async (err) => { // write the buffer to a new file with .jpg extension
       if (err) {
-        console.log(err);
+        console.log(err)
       }
-      const insertQuery = "INSERT INTO user_docs_proof(user_id, user_doc) VALUES (?, ?)";
+      const insertQuery = "INSERT INTO user_docs_proof(user_id, user_doc) VALUES (?, ?)"
       pool.query(insertQuery, [User_id, fileBuffer]);
-      const tempInsertQuery = "INSERT INTO user_docs_temp(user_id, license,aadhaar,pan,voter) VALUES (?, ?, ?, ?, ?)";
-      pool.query(tempInsertQuery, [User_id, license, aadhar, pan, voter]);
-      res.redirect('/dashboard');
+      const tempInsertQuery = "INSERT INTO user_docs_temp(user_id, license,aadhaar,pan,voter) VALUES (?, ?, ?, ?, ?)"
+      pool.query(tempInsertQuery, [User_id, license, aadhar, pan, voter])
+      res.redirect('/dashboard')
       // res.send({"Status":"File and user data uploaded successfully"});
-    });
-  });
+    })
+  })
+
+  //route for rto officer to view pending approvals
   var useridverify;
   app.get('/verifyinfo',(req,res)=>{
-    const query="SELECT * from user_docs_temp LIMIT 1";
+    const query="SELECT * from user_docs_temp LIMIT 1"
     pool.query(query,(request,results,err)=>{
-      var data=JSON.parse(JSON.stringify(results));
-      useridverify=data[0].user_id;
-      var license=data[0].license;
-      var aadhaar=data[0].aadhaar;
-      var pan=data[0].pan;
-      var voter=data[0].voter;
-      res.render('info_verify',{userid:useridverify,license:license,aadhar:aadhaar,pan:pan,voter:voter});
+      var data=JSON.parse(JSON.stringify(results))
+      useridverify=data[0].user_id
+      var license=data[0].license
+      var aadhaar=data[0].aadhaar
+      var pan=data[0].pan
+      var voter=data[0].voter
+      res.render('info_verify',{userid:useridverify,license:license,aadhar:aadhaar,pan:pan,voter:voter})
     })
   });
   app.get('/docverify',(req,res)=>{
-    const selectQuery = "SELECT user_doc FROM user_docs_proof WHERE user_id =?";
+    const selectQuery = "SELECT user_doc FROM user_docs_proof WHERE user_id =?"
     pool.query(selectQuery,[useridverify], async (error, results) => {
       if (error) {
-        console.log(error);
-        res.status(500).send('Internal Server Error');
+        console.log(error)
+        res.status(500).send('Internal Server Error')
         return;
       }
-      const data = results[0].user_doc;
+      const data = results[0].user_doc
       res.writeHead(200, {
         'Content-Type': 'image/jpeg', // set the content type to JPEG
         'Content-Length': data.length
       });
-      res.end(data); // send the binary data as the response
+      res.end(data) // send the binary data as the response
     });
   });  
+
+   //route for rto officer to accept uploaded user document
   app.get('/infoaccept',(req,res)=>{
-    const query="SELECT * from user_docs_temp LIMIT 1";
+    const query="SELECT * from user_docs_temp LIMIT 1"
     pool.query(query,(request,results,err)=>{
-      var data=JSON.parse(JSON.stringify(results));
-      console.log(data);
-      var userid=data[0].user_id;
-      var license=data[0].license;
-      var aadhaar=data[0].aadhaar;
-      var pan=data[0].pan;
-      var voter=data[0].voter;
+      var data=JSON.parse(JSON.stringify(results))
+      console.log(data)
+      var userid=data[0].user_id
+      var license=data[0].license
+      var aadhaar=data[0].aadhaar
+      var pan=data[0].pan
+      var voter=data[0].voter
       const query1="INSERT into user_docs (user_id,license,aadhaar,pan,voter) VALUES (?,?,?,?,?)";
       pool.query(query1,[userid,license,aadhaar,pan,voter],(requests,results,err)=>{
         if(err)
@@ -514,32 +522,34 @@ app.post('/afterproofentry',upload11.single('docs'),async (req,res)=>{
         else
         
         res.redirect('/rto_dashboard')
-        const query2="DELETE  from user_docs_temp where user_id=?";
+        const query2="DELETE  from user_docs_temp where user_id=?"
         pool.query(query2,[userid],(requests1,results1,err1)=>{
           if(err1)
-          console.log(err1);
+          console.log(err1)
         })
       
       })  
   });
   });
+
+  //route for rto officer to reject uploaded user document
   app.get('/inforeject',(req,res)=>{
-    const query="SELECT * from user_docs_temp LIMIT 1";
+    const query="SELECT * from user_docs_temp LIMIT 1"
     pool.query(query,(request,results,err)=>{
-      var data=JSON.parse(JSON.stringify(results));
-      console.log(data);
-      var userid=data[0].user_id;
+      var data=JSON.parse(JSON.stringify(results))
+      console.log(data)
+      var userid=data[0].user_id
       console.log(userid)
-      const query1="DELETE FROM user_docs_temp where user_id=?";
+      const query1="DELETE FROM user_docs_temp where user_id=?"
       pool.query(query1,[userid],(requests,results,err)=>{
         if(err)
         console.log(err)
         else
        {
-        const query2="DELETE FROM user_docs_proof where user_id=?";
+        const query2="DELETE FROM user_docs_proof where user_id=?"
       pool.query(query2,[userid],(requests,results,err)=>{
         if(err)
-        console.log(err);
+        console.log(err)
         else
         {
           // res.send({"Status":"Data Deleted"});
@@ -549,7 +559,7 @@ app.post('/afterproofentry',upload11.single('docs'),async (req,res)=>{
   }
       })
   })
-  });
+  })
 //starting the server
 app.listen(3004, ()=>{
     console.log('Server-Port: 3004')
