@@ -49,12 +49,14 @@ input[type=radio] {
                             </div>
                             <div class="form-group">
                                 <label for="doi" class="text-info">Date of Issue</label><br>
-                                <input type="date" name="doi" id="doi" class="form-control" required><br>
+                                <input type="date" name="doi" id="doi" class="form-control" required><br><br>
                                     {{#if msg}}
                                     <p style="color: red;font:100">*Fine ID Range is from 1 to 93 only!</p>      
                                     {{/if}}
-                                    <br><br>
-                                <br>
+                                    {{#if msg1}}
+                                    <p style="color: red;font:100">*Invalid Vehicle Registration Number</p>
+                                    {{/if}}  
+                                    <br>
                                 <button name="next" class="btn btn-info btn-md">NEXT</button>
                             </div>
                         </form>
