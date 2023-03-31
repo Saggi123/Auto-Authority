@@ -25,6 +25,7 @@ app.use(session({
 app.use(cookieParser())
 
 app.use(bodyParser.urlencoded({extended: true}))
+
 app.use(bodyParser.json())
 
 //creating mysql connection pool
@@ -42,9 +43,9 @@ const storage = multer.diskStorage({
     filename: function (req, file, cb) {
       cb(null, file.fieldname + '-' +Date.now());
     }
-  });
+});
   
-  const upload11 = multer({ storage: storage });
+const upload11 = multer({ storage: storage });
 //setting default engine to handlebar
 app.set('view engine', 'hbs')
 
@@ -210,14 +211,26 @@ app.post('/fine', async(req, res)=>{
         const doi = req.body.doi;
 
         //querying the db
-        pool.query('INSERT INTO impose_fine (veh_reg_no, fine_id, doi) VALUES (?,?,?)', [vehicle, fine, doi], (err)=>{
-            if(err)
-                console.log('Failed to Add Fine: ', err)
-            else{
-                console.log('Fine Added Successfully')
-                res.redirect('rto_index')
+        pool.query('SELECT * from user_vehicle WHERE reg_plate = ?', [vehicle], (err, result)=>{
+          if(err)
+            console.log('Error Retrieving Vehicle Info!')
+          else if(result.length == 0)
+            res.render('fines', {msg1: true})
+          else{
+            if(fine >=1 && fine <= 93){
+              pool.query('INSERT INTO impose_fine (veh_reg_no, fine_id, doi) VALUES (?,?,?)', [vehicle, fine, doi], (err)=>{
+                if(err)
+                    console.log('Failed to Add Fine: ', err)
+                else{
+                    console.log('Fine Added Successfully')
+                    res.redirect('rto_index')
+                }
+            })
             }
-        })
+            else
+              res.render('fines', {msg: true}) 
+          }
+        })      
     }
     else
         res.redirect('/')
@@ -262,8 +275,10 @@ app.post('/rto_login', async(req, res)=>{
     })
 })
 
-//login route for vehicle owner
+//variables
 var data2,user_id;
+
+//login route for vehicle owner
 app.post('/login', async(req, res)=>{
      user_id = req.body.username
     const password = req.body.password
@@ -363,9 +378,11 @@ app.post('/login', async(req, res)=>{
     })
 })
 
-//route for rto dashboard
+//variable
 var count1;
-    app.get('/rto_dashboard', async(req, res) =>{
+
+//route for rto dashboard
+app.get('/rto_dashboard', async(req, res) =>{
       if(req.session.loggedin){
         try{
           const query="SELECT user_id from user_docs_temp ";
@@ -383,7 +400,8 @@ var count1;
         res.redirect('/');
       }
       
-    });
+})
+
 //route for rto officer logout
 app.get('/rto_logout', (req, res)=>{
     req.session.destroy((err)=>{
@@ -429,10 +447,13 @@ app.get('/upload',(req,res)=>
     }
 });
 
-//route to handle repetitive document verification submissions from vehicle owner
+//variable for user doc verification
 var User_id,aadhar,voter,pan,license
+
+//route to handle repetitive document verification submissions from vehicle owner
 app.post('/afterentry',async(req,res)=>{
-     User_id=req.body.username
+  if(req.session.loggedin){
+    User_id=req.body.username
      aadhar=req.body.aadhar
      pan=req.body.pan
      voter=req.body.voter
@@ -453,12 +474,15 @@ app.post('/afterentry',async(req,res)=>{
       })
     }
   })
+  }
+  else  
+    res.redirect('/')  
 })
 
 //route to convert uploaded file to jpeg/jpg
 app.post('/afterproofentry',upload11.single('docs'),async (req,res)=>{
+  if(req.session.loggedin){
     const file=req.file;
-    console.log(file.path)
     const fileBuffer = await sharp(file.path).jpeg().toBuffer() // convert the file to a JPEG buffer
     fs.writeFile(file.path + '.jpg', fileBuffer, async (err) => { // write the buffer to a new file with .jpg extension
       if (err) {
@@ -471,11 +495,15 @@ app.post('/afterproofentry',upload11.single('docs'),async (req,res)=>{
       res.redirect('/dashboard')
       // res.send({"Status":"File and user data uploaded successfully"});
     })
-  })
+  }
+  else
+    res.redirect('/')   
+})
 
-  //route for rto officer to view pending approvals
-  var useridverify;
-  app.get('/verifyinfo',(req,res)=>{
+//route for rto officer to view pending approvals
+var useridverify;
+app.get('/verifyinfo',(req,res)=>{
+  if(req.session.loggedin){
     const query="SELECT * from user_docs_temp LIMIT 1"
     pool.query(query,(request,results,err)=>{
       var data=JSON.parse(JSON.stringify(results))
@@ -486,8 +514,14 @@ app.post('/afterproofentry',upload11.single('docs'),async (req,res)=>{
       var voter=data[0].voter
       res.render('info_verify',{userid:useridverify,license:license,aadhar:aadhaar,pan:pan,voter:voter})
     })
-  });
-  app.get('/docverify',(req,res)=>{
+  } 
+  else
+    res.redirect('/')
+})
+
+//route for rto officer to verify uploaded docs
+app.get('/docverify',(req,res)=>{
+  if(req.session.loggedin){
     const selectQuery = "SELECT user_doc FROM user_docs_proof WHERE user_id =?"
     pool.query(selectQuery,[useridverify], async (error, results) => {
       if (error) {
@@ -499,17 +533,20 @@ app.post('/afterproofentry',upload11.single('docs'),async (req,res)=>{
       res.writeHead(200, {
         'Content-Type': 'image/jpeg', // set the content type to JPEG
         'Content-Length': data.length
-      });
+      })
       res.end(data) // send the binary data as the response
-    });
-  });  
+    })
+  }
+  else  
+    res.redirect('/')
+})
 
-   //route for rto officer to accept uploaded user document
-  app.get('/infoaccept',(req,res)=>{
+//route for rto officer to accept uploaded user document
+app.get('/infoaccept',(req,res)=>{
+  if(req.session.loggedin){
     const query="SELECT * from user_docs_temp LIMIT 1"
     pool.query(query,(request,results,err)=>{
       var data=JSON.parse(JSON.stringify(results))
-      console.log(data)
       var userid=data[0].user_id
       var license=data[0].license
       var aadhaar=data[0].aadhaar
@@ -529,37 +566,47 @@ app.post('/afterproofentry',upload11.single('docs'),async (req,res)=>{
         })
       
       })  
-  });
-  });
+  })
+  }
+  else
+    res.redirect('/')  
+})
 
-  //route for rto officer to reject uploaded user document
-  app.get('/inforeject',(req,res)=>{
+//route for rto officer to reject uploaded user document
+app.get('/inforeject',(req,res)=>{
+  if(req.session.loggedin){
     const query="SELECT * from user_docs_temp LIMIT 1"
     pool.query(query,(request,results,err)=>{
       var data=JSON.parse(JSON.stringify(results))
-      console.log(data)
       var userid=data[0].user_id
-      console.log(userid)
       const query1="DELETE FROM user_docs_temp where user_id=?"
       pool.query(query1,[userid],(requests,results,err)=>{
         if(err)
         console.log(err)
         else
        {
-        const query2="DELETE FROM user_docs_proof where user_id=?"
-      pool.query(query2,[userid],(requests,results,err)=>{
-        if(err)
-        console.log(err)
-        else
-        {
-          // res.send({"Status":"Data Deleted"});
-          res.redirect('/rto_dashboard')
+          const query2="DELETE FROM user_docs_proof where user_id=?"
+          pool.query(query2,[userid],(requests,results,err)=>{
+            if(err)
+            console.log(err)
+            else
+            {
+              // res.send({"Status":"Data Deleted"});
+              res.redirect('/rto_dashboard')
+            }
+          })
         }
-       })
-  }
       })
   })
-  })
+  }
+  else
+    res.redirect('/')
+})
+
+//route for vehicle owner to create fasttag or view balance
+app.get('/fast_tag', (req, res)=>{
+})
+
 //starting the server
 app.listen(3004, ()=>{
     console.log('Server-Port: 3004')
