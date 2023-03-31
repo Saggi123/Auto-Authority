@@ -424,7 +424,7 @@ app.get('/logout', (req, res)=>{
 
 app.get('/upload',(req,res)=>
 {
-    if(req.session){
+    if(req.session.loggedin){
     res.render('user_credentials.hbs',{username:user_id});
     }
 });
@@ -447,7 +447,6 @@ app.post('/afterentry',async(req,res)=>{
         res.send({"Status":"Your Request is already accepted"})
         else{
           res.render('usercredentialsproof');
- 
 }
 });
     }
@@ -465,7 +464,8 @@ app.post('/afterproofentry',upload11.single('docs'),async (req,res)=>{
       pool.query(insertQuery, [User_id, fileBuffer]);
       const tempInsertQuery = "INSERT INTO user_docs_temp(user_id, license,aadhaar,pan,voter) VALUES (?, ?, ?, ?, ?)";
       pool.query(tempInsertQuery, [User_id, license, aadhar, pan, voter]);
-      res.send({"Status":"File and user data uploaded successfully"});
+      res.redirect('/dashboard');
+      // res.send({"Status":"File and user data uploaded successfully"});
     });
   });
   var useridverify;
@@ -478,7 +478,7 @@ app.post('/afterproofentry',upload11.single('docs'),async (req,res)=>{
       var aadhaar=data[0].aadhaar;
       var pan=data[0].pan;
       var voter=data[0].voter;
-      res.render('infoverify',{userid:useridverify,license:license,aadhar:aadhaar,pan:pan,voter:voter});
+      res.render('info_verify',{userid:useridverify,license:license,aadhar:aadhaar,pan:pan,voter:voter});
     })
   });
   app.get('/docverify',(req,res)=>{
@@ -513,7 +513,7 @@ app.post('/afterproofentry',upload11.single('docs'),async (req,res)=>{
         console.log(err)
         else
         
-        res.send({"Status":"Data Accepted"})
+        res.redirect('/rto_dashboard')
         const query2="DELETE  from user_docs_temp where user_id=?";
         pool.query(query2,[userid],(requests1,results1,err1)=>{
           if(err1)
@@ -542,7 +542,8 @@ app.post('/afterproofentry',upload11.single('docs'),async (req,res)=>{
         console.log(err);
         else
         {
-          res.send({"Status":"Data Deleted"});
+          // res.send({"Status":"Data Deleted"});
+          res.redirect('/rto_dashboard')
         }
        })
   }
