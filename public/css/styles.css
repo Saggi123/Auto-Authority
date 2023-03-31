@@ -11503,3 +11503,50 @@ html {
 .copyright {
   background-color: #1a252f;
 }
+.menu h1{
+  color: #ffffff;
+  text-align: center;
+  padding-top:30px;
+  font-weight: 900;
+  font-size: 34px;
+  font-family: sans-serif;
+  font-style: italic;
+  padding-bottom: 30px;
+}
+.menu table{
+  padding-top: 30px;
+  margin-left: auto;
+  margin-right: auto;
+  width:80%;
+  border: 2px solid #fff;
+  border-collapse: collapse;
+  text-align: center;
+}
+.menu th{
+  border: 2px solid #fff;
+  color:#ffffff;
+  font-size: 24px;
+  font-weight: bold;
+  font-style: italic;
+  padding: 20px;
+}
+
+.menu table td{
+  border: 2px solid #ffffff;
+  color:aliceblue;
+  font-size: 24px;
+  font-weight: bold;
+  font-style: italic;
+  padding-top: 30px;
+  padding-bottom: 30px;
+}
+
+.menu table td a
+{
+  
+  color:#ffffff;
+  /* text-decoration: none; */
+  font-size: 50px;
+  padding-left: 250px;
+}
+
